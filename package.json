@@ -1,0 +1,11 @@
+{
+  "name": "msa-vote",
+  "version": "0.1.0",
+  "description": "MySimpleApp module offering some voting mecanism.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nicolas CARREZ <nicolas.carrez@gmail.com>",
+  "license": "MIT"
+}
