@@ -7,5 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nicolas CARREZ <nicolas.carrez@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "msaKey": "vote",
+  "msaDependencies": {
+    "db": "../msa-db"
+  }
 }
