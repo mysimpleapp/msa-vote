@@ -5,7 +5,7 @@ const { VotesDb, VoteVoicesDb } = require('./db')
 class MsaVoteModule extends Msa.Module {
 
 	constructor(dbKey){
-		super("vote")
+		super()
 		this.dbKey = dbKey
 		this.initDb()
 		this.initApp()
