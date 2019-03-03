@@ -1,17 +1,57 @@
-import { Q, ajax } from "/msa/msa.js"
+import { importHtml, Q, ajax } from "/msa/msa.js"
+
+importHtml(`<style>
+	msa-vote {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+	}
+	msa-vote button {
+		padding: .2em
+/*		height: 2em; */
+	}
+	msa-vote .counts {
+		padding: .5em;
+		display:flex;
+		flex-direction:column;
+		align-items: center;
+	}
+	msa-vote .count {
+		font-weight: bold;
+	}
+	msa-vote .nb {
+		font-size: .8em;
+	}
+</style>`)
 
 const content = `
-	<button class="no">-</button> <span class="count">-</span> <button class="yes">+</button>`
+	<button class="no">-</button>
+	<span class="counts">
+		<span class="count">-</span>
+		<span class="nb"></span>
+	</span>
+	<button class="yes">+</button>`
 
 export class HTMLMsaVoteElement extends HTMLElement {
 
 	connectedCallback() {
 		this.Q = Q
-		this.baseUrl = this.getAttribute("base-url")
-		this.key = this.getAttribute("key")
+		this.initAttrs()
 		this.initContent()
 		this.initActions()
-		this.getVotesCount()
+		if(this.nb !== null) this.initVotesCount()
+		else this.getVotesCount()
+	}
+
+	defAttribute(key, defVal){
+		return this.hasAttribute(key) ? this.getAttribute(key) : defVal
+	}
+
+	initAttrs(){
+		this.baseUrl = this.getAttribute("base-url")
+		this.key = this.getAttribute("key")
+		this.sum = JSON.parse(this.getAttribute("sum"))
+		this.nb = JSON.parse(this.getAttribute("nb"))
 	}
 
 	initContent(){
@@ -24,14 +64,16 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	getVotesCount(){
-		ajax("GET", `${this.baseUrl}/_count/${this.key}`, count =>
-			this.initVotesCount(count))
+		ajax("GET", `${this.baseUrl}/_count/${this.key}`, count => {
+			if(count) Object.assign(this, count)
+			this.initVotesCount()
+		})
 	}
 
-	initVotesCount({ sum, nb }){
-		this.sum = sum
-		this.nb = nb
-		this.Q(".count").textContent = nb ? (sum / nb) : 0
+	initVotesCount(){
+		const { sum, nb } = this
+		this.Q(".count").textContent = nb ? Math.round(100 * sum / nb)+"%" : "-"
+		this.Q(".nb").textContent = nb + ' voter' + (nb > 1 ? 's' : '')
 	}
 
 	postVote(vote){
