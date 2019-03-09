@@ -12,9 +12,10 @@ importHtml(`<style>
 	}
 	msa-vote .counts {
 		padding: .5em;
-		display:flex;
-		flex-direction:column;
+		display: flex;
+		flex-direction: column;
 		align-items: center;
+		position: relative;
 	}
 	msa-vote .count {
 		font-weight: bold;
@@ -26,9 +27,10 @@ importHtml(`<style>
 
 const content = `
 	<button class="no">-</button>
-	<span class="counts">
-		<span class="count">-</span>
-		<span class="nb"></span>
+	<span class="counts" style="position: relative">
+		<span class="count msa-loading-invisible">-</span>
+		<span class="nb msa-loading-invisible"></span>
+		<msa-loader style="position: absolute"></msa-loader>
 	</span>
 	<button class="yes">+</button>`
 
@@ -64,10 +66,12 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	getVotesCount(){
-		ajax("GET", `${this.baseUrl}/_count/${this.key}`, count => {
-			if(count) Object.assign(this, count)
-			this.initVotesCount()
-		})
+		ajax("GET", `${this.baseUrl}/_count/${this.key}`,
+			{ loadingDom: this.Q(".counts") },
+			count => {
+				if(count) Object.assign(this, count)
+				this.initVotesCount()
+			})
 	}
 
 	initVotesCount(){
@@ -78,7 +82,10 @@ export class HTMLMsaVoteElement extends HTMLElement {
 
 	postVote(vote){
 		ajax("POST", `${this.baseUrl}/_vote/${this.key}`,
-			{ body:{ vote }},
+			{
+				body:{ vote },
+				loadingDom: this.Q(".counts")
+			},
 			() => this.getVotesCount() )
 	}
 }

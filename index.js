@@ -16,7 +16,7 @@ class MsaVoteModule extends Msa.Module {
 		this.voicesDb = VoteVoicesDb
 	}
 
-	getFullDbKey(key){
+	getDbKey(key){
 		return this.dbKey + '-' + key
 	}
 
@@ -37,6 +37,11 @@ class MsaVoteModule extends Msa.Module {
 		return votes.map(this.formatVoteCount)
 	}
 
+	getUserKey(req){
+		const user = req.session ? req.session.user : null
+		return user ? user.name : req.connection.remoteAddress
+	}
+
 
 	initApp(){
 		const app = this.app
@@ -44,7 +49,7 @@ class MsaVoteModule extends Msa.Module {
 		// get vote count
 		app.get("/_count/:key", async (req, res, next) => {
 			try {
-				const key = this.getFullDbKey(req.params.key)
+				const key = this.getDbKey(req.params.key)
 				res.json(await this.getVoteCount(key))
 			} catch(err) { next(err) }
 		})
@@ -52,7 +57,7 @@ class MsaVoteModule extends Msa.Module {
 		// get vote counts
 		app.get("/_counts/:keyPrefix", async (req, res, next) => {
 			try {
-				const keyPrefix = this.getFullDbKey(req.params.keyPrefix)
+				const keyPrefix = this.getDbKey(req.params.keyPrefix)
 				res.json(await this.getVoteCounts(keyPrefix))
 			} catch(err) { next(err) }
 		})
@@ -61,12 +66,10 @@ class MsaVoteModule extends Msa.Module {
 		// post vote
 		app.post("/_vote/:key", async (req, res, next) => {
 			try {
-				const key = this.getFullDbKey(req.params.key),
+				const key = this.getDbKey(req.params.key),
 					vote = req.body.vote
-				// determine voter
-				const user = this.session ? this.session.user : null
-				const voter = user ? user.name : req.connection.remoteAddress
 				// insert vote voice in DB
+				const voter = this.getUserKey(req)
 				await this.voicesDb.upsert(
 					{ key, voter, vote },
 					{ where: { key, voter }})
