@@ -1,6 +1,6 @@
 {
-  "name": "msa-vote",
-  "version": "0.1.0",
+  "name": "@mysimpleapp/msa-vote",
+  "version": "0.1.2",
   "description": "MySimpleApp module offering some voting mecanism",
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,6 @@
   "license": "MIT",
   "msaKey": "vote",
   "msaDependencies": {
-    "db": "../msa-db"
+    "db": "@mysimpleapp/msa-db"
   }
 }
