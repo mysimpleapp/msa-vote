@@ -1,7 +1,7 @@
 module.exports = async itf => {
 	// create table in DB
-	const { VotesDb, VoteVoicesDb } = require("./db")
+	const { VotesDb, VoteSetsDb } = require("./db")
 	await VotesDb.sync()
-	await VoteVoicesDb.sync()
+	await VoteSetsDb.sync()
 }
 

@@ -45,7 +45,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 		else this.getVotesCount()
 	}
 
-	defAttribute(key, defVal){
+	getAttributeOr(key, defVal){
 		return this.hasAttribute(key) ? this.getAttribute(key) : defVal
 	}
 
@@ -54,10 +54,15 @@ export class HTMLMsaVoteElement extends HTMLElement {
 		this.key = this.getAttribute("key")
 		this.sum = JSON.parse(this.getAttribute("sum"))
 		this.nb = JSON.parse(this.getAttribute("nb"))
+		this.canVote = JSON.parse(this.getAttributeOr("can-vote", "true"))
 	}
 
 	initContent(){
 		this.innerHTML = content
+		if(!this.canVote){
+			this.Q("button.yes").style.visibility = "hidden"
+			this.Q("button.no").style.visibility = "hidden"
+		}
 	}
 
 	initActions(){
