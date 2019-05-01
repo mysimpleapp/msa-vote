@@ -13,8 +13,8 @@ const VoteSetsDb = orm.define('msa_vote_sets', {
 	sum: Orm.INTEGER,
 	nb: Orm.INTEGER,
 	params: { type: Orm.TEXT,
-		get() { const val = this.getDataValue('params'); return val ? voteParamsDef.deserialize(val) : null },
-		set(val) { if(val) val = voteParamsDef.serialize(val); this.setDataValue('params', val) }
+		get() { return voteParamsDef.deserialize(this.getDataValue('params')) },
+		set(val) { this.setDataValue('params', voteParamsDef.serialize(val)) }
 	}
 })
 
