@@ -1,6 +1,6 @@
 {
   "name": "@mysimpleapp/msa-vote",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MySimpleApp module offering some voting mecanism",
   "main": "index.js",
   "scripts": {
