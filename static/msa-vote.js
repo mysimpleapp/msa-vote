@@ -72,11 +72,11 @@ export class HTMLMsaVoteElement extends HTMLElement {
 
 	getVotesCount(){
 		ajax("GET", `${this.baseUrl}/_count/${this.key}`,
-			{ loadingDom: this.Q(".counts") },
-			count => {
-				if(count) Object.assign(this, count)
-				this.initVotesCount()
-			})
+			{ loadingDom: this.Q(".counts") })
+		.then(count => {
+			if(count) Object.assign(this, count)
+			this.initVotesCount()
+		})
 	}
 
 	initVotesCount(){
@@ -86,12 +86,11 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	postVote(vote){
-		ajax("POST", `${this.baseUrl}/_vote/${this.key}`,
-			{
-				body:{ vote },
-				loadingDom: this.Q(".counts")
-			},
-			() => this.getVotesCount() )
+		ajax("POST", `${this.baseUrl}/_vote/${this.key}`, {
+			body:{ vote },
+			loadingDom: this.Q(".counts")
+		})
+		.then(() => this.getVotesCount())
 	}
 }
 
