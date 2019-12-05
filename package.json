@@ -10,6 +10,7 @@
   "license": "MIT",
   "msaKey": "vote",
   "msaDependencies": {
+    "utils": "@mysimpleapp/msa-utils",
     "db": "@mysimpleapp/msa-db"
   }
 }

@@ -1,4 +1,4 @@
-import { importHtml, Q, ajax } from "/msa/msa.js"
+import { importHtml, Q, ajax } from "/utils/msa-utils.js"
 
 importHtml(`<style>
 	msa-vote {
