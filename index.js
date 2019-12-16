@@ -10,9 +10,9 @@ const nullPerm = new VotePerm()
 
 class MsaVoteModule extends Msa.Module {
 
-	constructor(dbKeyPrefix){
+	constructor(dbIdPrefix){
 		super()
-		this.dbKeyPrefix = dbKeyPrefix
+		this.dbIdPrefix = dbIdPrefix
 		this.initDb()
 		this.initApp()
 	}
@@ -22,40 +22,40 @@ class MsaVoteModule extends Msa.Module {
 		this.db = VotesDb
 	}
 
-	getDbKeyPrefix(req){
-		return this.dbKeyPrefix
+	getDbIdPrefix(req){
+		return this.dbIdPrefix
 	}
 
-	buildDbKey(req, key){
-		return this.getDbKeyPrefix(req) + '-' + key
+	buildDbId(req, id){
+		return this.getDbIdPrefix(req) + '-' + id
 	}
 
-	formatVoteSet(req, key, voteSet){
+	formatVoteSet(req, id, voteSet){
 		if(!this.checkPerm(req, voteSet, 1))
 			return null
 		return {
-			key: key,
+			id: id,
 			nb: voteSet ? voteSet.nb : 0,
 			sum: voteSet ? voteSet.sum : 0,
 			canVote: this.checkPerm(req, voteSet, 2)
 		}
 	}
 
-	async getVoteSet(req, key){
-		const voteSet = await this.setsDb.findOne({ where: { key }})
-		return this.formatVoteSet(req, key, voteSet)
+	async getVoteSet(req, id){
+		const voteSet = await this.setsDb.findOne({ where: { id }})
+		return this.formatVoteSet(req, id, voteSet)
 	}
 
-	async getVoteSets(req, keys){
+	async getVoteSets(req, ids){
 		const voteSets = await this.setsDb.findAll({
-			where:{ key: { [Orm.Op.in]: keys }}
+			where:{ id: { [Orm.Op.in]: ids }}
 		})
-		return keys
-			.map(key => this.formatVoteSet(req, key, getByKey(voteSets, key)))
+		return ids
+			.map(id => this.formatVoteSet(req, id, getById(voteSets, id)))
 			.filter(voteSet => voteSet !== null)
 	}
 
-	getUserKey(req){
+	getUserId(req){
 		const user = req.session ? req.session.user : null
 		return user ? user.name : req.connection.remoteAddress
 	}
@@ -71,43 +71,43 @@ class MsaVoteModule extends Msa.Module {
 		const app = this.app
 
 		// get vote count
-		app.get("/_count/:key", userMdw, async (req, res, next) => {
+		app.get("/_count/:id", userMdw, async (req, res, next) => {
 			try {
-				const key = this.buildDbKey(req, req.params.key)
-				res.json(await this.getVoteSet(req, key))
+				const id = this.buildDbId(req, req.params.id)
+				res.json(await this.getVoteSet(req, id))
 			} catch(err) { next(err) }
 		})
 /*
 		// get vote counts
-		app.get("/_counts/:keyPrefix", userMdw, async (req, res, next) => {
+		app.get("/_counts/:idPrefix", userMdw, async (req, res, next) => {
 			try {
-				const keyPrefix = this.buildDbKey(req, req.params.keyPrefix)
-				res.json(await this.getVoteSets(req, keyPrefix))
+				const idPrefix = this.buildDbId(req, req.params.idPrefix)
+				res.json(await this.getVoteSets(req, idPrefix))
 			} catch(err) { next(err) }
 		})
 */
 
 		// post vote
-		app.post("/_vote/:key", userMdw, async (req, res, next) => {
+		app.post("/_vote/:id", userMdw, async (req, res, next) => {
 			try {
-				const key = this.buildDbKey(req, req.params.key),
+				const id = this.buildDbId(req, req.params.id),
 					vote = req.body.vote
 				// insert vote in DB
-				const voter = this.getUserKey(req)
+				const voter = this.getUserId(req)
 				await this.db.upsert(
-					{ key, voter, vote },
-					{ where: { key, voter }})
+					{ id, voter, vote },
+					{ where: { id, voter }})
 				// count votes
 				const count = await this.db.findOne({
 					attributes: [
 						[ Orm.fn('SUM', Orm.col('vote')), 'sum' ],
 						[ Orm.fn('COUNT', Orm.col('vote')), 'nb' ]],
-					where: { key }})
+					where: { id }})
 				const { sum = 0, nb = 0 } = count.dataValues
 				// insert count in vote set DB
 				await this.setsDb.upsert(
-					{ key, sum, nb },
-					{ where: { key }})
+					{ id, sum, nb },
+					{ where: { id }})
 				// returm ok
 				res.sendStatus(200)
 			} catch(err) {
@@ -127,13 +127,14 @@ function deepGet(obj, key, ...args){
 	return deepGet(obj2, ...args)
 }
 
-function getByKey(arr, key){
+function getById(arr, id){
 	for(let i=0, len=arr.length; i<len; ++i){
 		const el = arr[i]
-		if(el.key === key) return el
+		if(el.id === id) return el
 	}
 	return null
 }
+	
 
 // export
 const exp = module.exports = new MsaVoteModule("vote")

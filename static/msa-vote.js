@@ -51,7 +51,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 
 	initAttrs(){
 		this.baseUrl = this.getAttribute("base-url")
-		this.key = this.getAttribute("key")
+		this.voteId = this.getAttribute("vote-id")
 		this.sum = JSON.parse(this.getAttribute("sum"))
 		this.nb = JSON.parse(this.getAttribute("nb"))
 		this.canVote = JSON.parse(this.getAttributeOr("can-vote", "true"))
@@ -71,7 +71,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	getVotesCount(){
-		ajax("GET", `${this.baseUrl}/_count/${this.key}`,
+		ajax("GET", `${this.baseUrl}/_count/${this.voteId}`,
 			{ loadingDom: this.Q(".counts") })
 		.then(count => {
 			if(count) Object.assign(this, count)
@@ -86,7 +86,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	postVote(vote){
-		ajax("POST", `${this.baseUrl}/_vote/${this.key}`, {
+		ajax("POST", `${this.baseUrl}/_vote/${this.voteId}`, {
 			body:{ vote },
 			loadingDom: this.Q(".counts")
 		})
