@@ -6,7 +6,7 @@ const labels = [
 	{ name: "Vote" }]
 
 class VotePerm extends PermNum {
-	getMaxVal(){ return 2 }
+	getMaxValue(){ return 2 }
 	getLabels(){ return labels }
 }
 VotePerm.NONE = 0
