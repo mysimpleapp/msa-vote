@@ -1,6 +1,6 @@
 // DB model
 const { orm, Orm } = Msa.require("db")
-const { voteParamsDef } = require("./params")
+const { VoteParamDict } = require("./params")
 
 const VotesDb = orm.define('msa_votes', {
 	id: { type: Orm.STRING, primaryKey: true },
@@ -13,8 +13,8 @@ const VoteSetsDb = orm.define('msa_vote_sets', {
 	sum: Orm.INTEGER,
 	nb: Orm.INTEGER,
 	params: { type: Orm.TEXT,
-		get() { return voteParamsDef.deserialize(this.getDataValue('params')) },
-		set(val) { this.setDataValue('params', voteParamsDef.serialize(val)) }
+		get() { return VoteParamDict.newFromDbVal(this.getDataValue('params')) },
+		set(val) { this.setDataValue('params', val.getAsDbVal()) }
 	}
 })
 

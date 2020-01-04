@@ -1,12 +1,6 @@
-const { join } = require('path')
 const { Orm } = Msa.require("db")
 const { userMdw } = Msa.require("user")
 const { VoteSetsDb, VotesDb } = require('./db')
-const { VotePerm } = require("./perm")
-const { voteParamsDef } = require('./params')
-
-const defPerm = voteParamsDef.get("perm").defVal
-const nullPerm = new VotePerm()
 
 class MsaVoteModule extends Msa.Module {
 
@@ -61,10 +55,8 @@ class MsaVoteModule extends Msa.Module {
 	}
 
 	checkPerm(req, voteSet, expVal, prevVal) {
-		const perm = deepGet(voteSet, "params", "perm")
-		if(perm) prevVal = perm.solve(req.session.user, prevVal)
-		if(prevVal!==undefined) return nullPerm.check(req.session.user, expVal, prevVal)
-		else return defPerm.check(req.session.user, expVal)
+		const perm = deepGet(voteSet, "params", "perm").get()
+		return perm.check(req.session.user, expVal, prevVal)
 	}
 
 	initApp(){

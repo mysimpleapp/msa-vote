@@ -1,7 +1,11 @@
-const { ParamsDef } = Msa.require("params")
+const { ParamDict } = Msa.require("params")
 const { VotePerm } = require("./perm")
 
-const voteParamsDef = new ParamsDef()
-voteParamsDef.add("perm", VotePerm.newPermParamDef({ group:"all", value:VotePerm.VOTE }))
+class VoteParamDict extends ParamDict {
+    constructor(){
+        super()
+        this.perm = VotePerm.newParam()
+    }
+}
  
-module.exports = { voteParamsDef }
+module.exports = { VoteParamDict }
