@@ -5,12 +5,10 @@ const labels = [
 	{ name: "Read" },
 	{ name: "Vote" }]
 
-const defExpr = { group:"all", value: 2 }
-
 class VotePerm extends PermNum {
-	getMaxValue(){ return 2 }
-	getLabels(){ return labels }
-	getDefaultExpr(){ return defExpr }
+	getMaxValue() { return 2 }
+	getLabels() { return labels }
+	getDefaultValue() { return 2 }
 }
 VotePerm.NONE = 0
 VotePerm.READ = 1
