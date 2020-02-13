@@ -21,14 +21,14 @@ exp.VoteSet = class {
         if (!keys || keys.indexOf("nb") >= 0)
             res.nb = this.nb
         if (!keys || keys.indexOf("params") >= 0)
-            res.params = this.params.getAsDbVal()
+            res.params = this.params.getAsDbStr()
         return res
     }
 
     parseFromDb(dbVoteSet) {
         this.sum = dbVoteSet.sum
         this.nb = dbVoteSet.nb
-        this.params = VoteParamDict.newFromDbVal(dbVoteSet.params)
+        this.params = VoteParamDict.newFromDbStr(dbVoteSet.params)
     }
 
     static newFromDb(id, dbVoteSet) {
