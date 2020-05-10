@@ -140,6 +140,9 @@ function mjoin(a, len, sep) {
 
 // export
 module.exports = {
+	installMsaModule: async itf => {
+		await require("./install")(itf)
+	},
 	startMsaModule: () => new MsaVoteModule("vote"),
 	MsaVoteModule
 }
