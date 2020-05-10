@@ -139,5 +139,7 @@ function mjoin(a, len, sep) {
 }
 
 // export
-const exp = module.exports = new MsaVoteModule("vote")
-exp.MsaVoteModule = MsaVoteModule
+module.exports = {
+	startMsaModule: () => new MsaVoteModule("vote"),
+	MsaVoteModule
+}
