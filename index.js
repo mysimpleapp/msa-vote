@@ -1,3 +1,4 @@
+const { registerMsaBox } = Msa.require("utils")
 const { withDb } = Msa.require("db")
 const { userMdw } = Msa.require("user")
 const { Vote, VoteSet } = require('./model')
@@ -120,6 +121,21 @@ class MsaVoteModule extends Msa.Module {
 		})
 	}
 }
+
+// box
+
+class MsaVoteBoxModule extends MsaVoteModule {
+	getId(req, reqId) {
+		return `${req.msaBoxCtx.parentId}-${reqId}`
+	}
+}
+
+registerMsaBox("msa-vote", {
+	title: "Vote",
+	//html: { wel: "/vote/msa-vote.js" },
+	createFun: "/vote/msa-vote.js:createMsaBox",
+	mods: { "/vote": new MsaVoteBoxModule() }
+})
 
 // utils
 

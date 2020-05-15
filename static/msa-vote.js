@@ -38,60 +38,80 @@ export class HTMLMsaVoteElement extends HTMLElement {
 
 	connectedCallback() {
 		this.Q = Q
-		this.initAttrs()
 		this.initContent()
 		this.initActions()
-		if(this.nb !== null) this.initVotesCount()
+		if (this.getNb() !== null) this.initVotesCount()
 		else this.getVotesCount()
 	}
 
-	getAttributeOr(key, defVal){
-		return this.hasAttribute(key) ? this.getAttribute(key) : defVal
+	getBaseRoute() {
+		if (this.hasAttribute("base-route"))
+			return this.getAttribute("base-route")
+		if (this.msaBoxCtx)
+			return `${this.msaBoxCtx.boxesRoute}/vote`
+	}
+	getVoteId() { return this.getAttribute("vote-id") }
+	getSum() {
+		if (this.sum !== undefined) return this.sum
+		return JSON.parse(this.getAttribute("sum"))
+	}
+	getNb() {
+		if (this.nb !== undefined) return this.nb
+		return JSON.parse(this.getAttribute("nb"))
+	}
+	getCanVote() {
+		if (this.hasAttribute("can-vote"))
+			return JSON.parse(this.getAttribute("can-vote"))
+		return true
 	}
 
-	initAttrs(){
-		this.baseUrl = this.getAttribute("base-url")
-		this.voteId = this.getAttribute("vote-id")
-		this.sum = JSON.parse(this.getAttribute("sum"))
-		this.nb = JSON.parse(this.getAttribute("nb"))
-		this.canVote = JSON.parse(this.getAttributeOr("can-vote", "true"))
-	}
-
-	initContent(){
+	initContent() {
 		this.innerHTML = content
-		if(!this.canVote){
+		if (!this.getCanVote()) {
 			this.Q("button.yes").style.visibility = "hidden"
 			this.Q("button.no").style.visibility = "hidden"
 		}
 	}
 
-	initActions(){
+	initActions() {
 		this.Q("button.no").onclick = () => this.postVote(0)
 		this.Q("button.yes").onclick = () => this.postVote(1)
 	}
 
-	getVotesCount(){
-		ajax("GET", `${this.baseUrl}/_count/${this.voteId}`,
+	getVotesCount() {
+		ajax("GET", `${this.getBaseRoute()}/_count/${this.getVoteId()}`,
 			{ loadingDom: this.Q(".counts") })
-		.then(count => {
-			if(count) Object.assign(this, count)
-			this.initVotesCount()
-		})
+			.then(count => {
+				if (count) Object.assign(this, count)
+				this.initVotesCount()
+			})
 	}
 
-	initVotesCount(){
-		const { sum, nb } = this
-		this.Q(".count").textContent = nb ? Math.round(100 * sum / nb)+"%" : "-"
+	initVotesCount() {
+		const sum = this.getSum()
+		const nb = this.getNb()
+		this.Q(".count").textContent = nb ? Math.round(100 * sum / nb) + "%" : "-"
 		this.Q(".nb").textContent = nb + ' voter' + (nb > 1 ? 's' : '')
 	}
 
-	postVote(vote){
-		ajax("POST", `${this.baseUrl}/_vote/${this.voteId}`, {
-			body:{ vote },
+	postVote(vote) {
+		ajax("POST", `${this.getBaseRoute()}/_vote/${this.getVoteId()}`, {
+			body: { vote },
 			loadingDom: this.Q(".counts")
 		})
-		.then(() => this.getVotesCount())
+			.then(() => this.getVotesCount())
 	}
 }
 
 customElements.define("msa-vote", HTMLMsaVoteElement)
+
+
+export function createMsaBox(boxParent) {
+	let id
+	for (id = 1; ; ++id)
+		if (!boxParent.querySelector(`msa-vote[vote-id='${id}']`))
+			break
+	const res = document.createElement("msa-vote")
+	res.setAttribute("vote-id", id)
+	return res
+}
