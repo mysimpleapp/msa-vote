@@ -132,9 +132,11 @@ class MsaVoteBoxModule extends MsaVoteModule {
 
 registerMsaBox("msa-vote", {
 	title: "Vote",
-	//html: { wel: "/vote/msa-vote.js" },
-	createFun: "/vote/msa-vote.js:createMsaBox",
-	mods: { "/vote": new MsaVoteBoxModule() }
+	mods: { "/vote": new MsaVoteBoxModule() },
+	head: "/vote/msa-vote.js",
+	create: "/vote/msa-vote.js:createMsaBox",
+	init: "/vote/msa-vote.js:initMsaBox",
+	export: "/vote/msa-vote.js:exportMsaBox"
 })
 
 // utils

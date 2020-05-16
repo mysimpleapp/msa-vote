@@ -45,10 +45,9 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	getBaseRoute() {
-		if (this.hasAttribute("base-route"))
+		if (this.hasAttribute("base-route")) // TODO: deprecate
 			return this.getAttribute("base-route")
-		if (this.msaBoxCtx)
-			return `${this.msaBoxCtx.boxesRoute}/vote`
+		return this.baseRoute
 	}
 	getVoteId() { return this.getAttribute("vote-id") }
 	getSum() {
@@ -105,6 +104,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 
 customElements.define("msa-vote", HTMLMsaVoteElement)
 
+// box
 
 export function createMsaBox(boxParent) {
 	let id
@@ -114,4 +114,12 @@ export function createMsaBox(boxParent) {
 	const res = document.createElement("msa-vote")
 	res.setAttribute("vote-id", id)
 	return res
+}
+
+export function initMsaBox(el, ctx) {
+	el.baseRoute = `${ctx.boxesRoute}/vote`
+}
+
+export function exportMsaBox(el) {
+	return `<msa-vote vote-id="${el.voteId}"></msa-vote>`
 }
