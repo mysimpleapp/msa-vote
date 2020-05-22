@@ -121,5 +121,7 @@ export function initMsaBox(el, ctx) {
 }
 
 export function exportMsaBox(el) {
-	return `<msa-vote vote-id="${el.voteId}"></msa-vote>`
+	const res = document.createElement("msa-vote")
+	res.setAttribute("vote-id", el.getVoteId())
+	return res
 }
