@@ -134,9 +134,9 @@ registerMsaBox("msa-vote", {
 	title: "Vote",
 	mods: { "/vote": new MsaVoteBoxModule() },
 	head: "/vote/msa-vote.js",
-	create: "/vote/msa-vote.js:createMsaBox",
-	init: "/vote/msa-vote.js:initMsaBox",
-	export: "/vote/msa-vote.js:exportMsaBox"
+	createRef: "/vote/msa-vote.js:createMsaBox",
+	initRef: "/vote/msa-vote.js:initMsaBox",
+	exportRef: "/vote/msa-vote.js:exportMsaBox"
 })
 
 // utils
