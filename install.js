@@ -5,8 +5,8 @@ module.exports = async itf => {
 		await db.run(
 			`CREATE TABLE IF NOT EXISTS msa_vote_sets (
 				id VARCHAR(255) PRIMARY KEY,
-				sum INTEGER,
-				nb INTEGER,
+				sum INTEGER DEFAULT 0,
+				nb INTEGER DEFAULT 0,
 				params TEXT
 			)`)
 		await db.run(

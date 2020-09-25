@@ -7,24 +7,27 @@ class MsaVoteModule extends Msa.Module {
 
 	constructor() {
 		super()
-		this.initDeps()
 		this.initApp()
 	}
 
-	initDeps() {
-		this.Vote = Vote
-		this.VoteSet = VoteSet
+	getDbId(ctx, id) {
+		return id
 	}
 
-	getId(ctx, reqId) {
-		return reqId
+	getIdFromDb(id) {
+		return parseInt(id.substring(id.lastIndexOf('-') + 1))
 	}
 
-	formatVoteSet(ctx, voteSet) {
+	nextDbId(ctx, id) {
+		if (!id) return this.getDbId(ctx, 0)
+		return this.getDbId(ctx, this.getIdFromDb(id) + 1)
+	}
+
+	exportVoteSet(ctx, voteSet) {
 		if (!this.checkPerm(ctx, voteSet, 1))
 			return null
 		return {
-			id: voteSet.id,
+			id: this.getIdFromDb(voteSet.id),
 			nb: voteSet ? voteSet.nb : 0,
 			sum: voteSet ? voteSet.sum : 0,
 			canVote: this.checkPerm(ctx, voteSet, 2)
@@ -33,7 +36,7 @@ class MsaVoteModule extends Msa.Module {
 
 	async getVoteSet(ctx, id) {
 		const dbVoteSet = await ctx.db.getOne("SELECT id, sum, nb, params FROM msa_vote_sets WHERE id=:id", { id })
-		const voteSet = this.VoteSet.newFromDb(id, dbVoteSet)
+		const voteSet = VoteSet.newFromDb(id, dbVoteSet)
 		return voteSet
 	}
 
@@ -42,12 +45,26 @@ class MsaVoteModule extends Msa.Module {
 		const dbVoteSetsById = {}
 		for (let dbVoteSet of dbVoteSets) dbVoteSetsById[dbVoteSet.id] = dbVoteSet
 		return ids
-			.map(id => this.VoteSet.newFromDb(id, dbVoteSetsById[id]))
-			.map(voteSet => this.formatVoteSet(ctx, voteSet))
+			.map(id => VoteSet.newFromDb(id, dbVoteSetsById[id]))
+			.map(voteSet => this.exportVoteSet(ctx, voteSet))
+	}
+
+	async createNewVoteSet(ctx) {
+		let voteSet
+		await ctx.db.transaction(async () => {
+			const row = await ctx.db.getOne("SELECT MAX(id) AS maxId FROM msa_vote_sets WHERE id LIKE :id FOR UPDATE", {
+				id: this.getDbId(ctx, '%')
+			})
+			const newId = this.nextDbId(ctx, row.maxId)
+			voteSet = new VoteSet(newId)
+			await ctx.db.run("INSERT INTO msa_vote_sets (id) VALUES (:id)",
+				voteSet.formatForDb(["id"]))
+		})
+		return voteSet
 	}
 
 	async upsertVote(ctx, id, voter, val) {
-		const vote = new this.Vote(id, voter)
+		const vote = new Vote(id, voter)
 		vote.vote = val
 		const values = vote.formatForDb()
 		const res = await ctx.db.run("UPDATE msa_votes SET vote=:vote WHERE id=:id AND voter=:voter", values)
@@ -64,7 +81,7 @@ class MsaVoteModule extends Msa.Module {
 	}
 
 	async upsertVoteSet(ctx, id, sum, nb) {
-		const voteSet = new this.VoteSet(id)
+		const voteSet = new VoteSet(id)
 		voteSet.sum = sum
 		voteSet.nb = nb
 		const values = voteSet.formatForDb(["id", "sum", "nb"])
@@ -91,26 +108,35 @@ class MsaVoteModule extends Msa.Module {
 		app.get("/_count/:id", userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id)
+				const id = this.getDbId(ctx, req.params.id)
 				const voteSet = await this.getVoteSet(ctx, id)
-				res.json(this.formatVoteSet(ctx, voteSet))
+				res.json(this.exportVoteSet(ctx, voteSet))
 			}).catch(next)
 		})
 		/*
 				// get vote counts
 				app.get("/_counts/:idPrefix", userMdw, async (req, res, next) => {
 					try {
-						const idPrefix = this.getId(req, req.params.idPrefix)
+						const idPrefix = this.getDbId(req, req.params.idPrefix)
 						res.json(await this.getVoteSets(req, idPrefix))
 					} catch(err) { next(err) }
 				})
 		*/
 
+		// post vote set
+		app.post("/_vote", userMdw, (req, res, next) => {
+			withDb(async db => {
+				const ctx = newCtx(req, { db })
+				const voteSet = await this.createNewVoteSet(ctx)
+				res.json(this.exportVoteSet(ctx, voteSet))
+			}).catch(next)
+		})
+
 		// post vote
 		app.post("/_vote/:id", userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id),
+				const id = this.getDbId(ctx, req.params.id),
 					vote = req.body.vote
 				const voter = this.getUserId(ctx)
 				await this.upsertVote(ctx, id, voter, vote)
@@ -125,8 +151,8 @@ class MsaVoteModule extends Msa.Module {
 // box
 
 class MsaVoteBoxModule extends MsaVoteModule {
-	getId(req, reqId) {
-		return `${req.msaBoxCtx.parentId}-${reqId}`
+	getDbId(req, id) {
+		return `${req.msaBoxCtx.parentId}-${id}`
 	}
 }
 

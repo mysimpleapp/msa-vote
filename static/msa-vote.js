@@ -106,13 +106,10 @@ customElements.define("msa-vote", HTMLMsaVoteElement)
 
 // box
 
-export function createMsaBox(boxParent) {
-	let id
-	for (id = 1; ; ++id)
-		if (!boxParent.querySelector(`msa-vote[vote-id='${id}']`))
-			break
+export async function createMsaBox(ctx) {
+	const vote = await ajax("POST", `${ctx.boxesRoute}/vote/_vote`)
 	const res = document.createElement("msa-vote")
-	res.setAttribute("vote-id", id)
+	res.setAttribute("vote-id", vote.id)
 	return res
 }
 
