@@ -1,5 +1,5 @@
 const { registerMsaBox } = Msa.require("utils")
-const { withDb } = Msa.require("db")
+const { db } = Msa.require("db")
 const { userMdw } = Msa.require("user")
 const { Vote, VoteSet } = require('./model')
 
@@ -10,7 +10,7 @@ class MsaVoteModule extends Msa.Module {
 		this.initApp()
 	}
 
-	getDbId(ctx, id) {
+	getDbId(req, id) {
 		return id
 	}
 
@@ -18,76 +18,99 @@ class MsaVoteModule extends Msa.Module {
 		return parseInt(id.substring(id.lastIndexOf('-') + 1))
 	}
 
-	nextDbId(ctx, id) {
-		if (!id) return this.getDbId(ctx, 0)
-		return this.getDbId(ctx, this.getIdFromDb(id) + 1)
+	nextDbId(req, id) {
+		if (!id) return this.getDbId(req, 0)
+		return this.getDbId(req, this.getIdFromDb(id) + 1)
 	}
 
-	exportVoteSet(ctx, voteSet) {
-		if (!this.checkPerm(ctx, voteSet, 1))
+	exportVoteSet(req, voteSet) {
+		if (!this.checkPerm(req, voteSet, 1))
 			return null
 		return {
 			id: this.getIdFromDb(voteSet.id),
 			nb: voteSet ? voteSet.nb : 0,
 			sum: voteSet ? voteSet.sum : 0,
-			canVote: this.checkPerm(ctx, voteSet, 2)
+			canVote: this.checkPerm(req, voteSet, 2)
 		}
 	}
 
-	async getVoteSet(ctx, id) {
-		const dbVoteSet = await ctx.db.getOne("SELECT id, sum, nb, params FROM msa_vote_sets WHERE id=:id", { id })
+	async getVoteSet(id) {
+		const dbVoteSet = await db.collection("msa_vote_sets").findOne({ _id:id })
 		const voteSet = VoteSet.newFromDb(id, dbVoteSet)
 		return voteSet
 	}
 
-	async getVoteSets(ctx, ids) {
-		const dbVoteSets = await ctx.db.get("SELECT id, sum, nb, params FROM msa_vote_sets WHERE id IN (" + mjoin('?', ids.length, ',') + ")", ids)
+	async getVoteSets(req, ids) {
+		const dbVoteSets = await db.collection("msa_vote_sets").findOne({ _id: { $in: ids }})
 		const dbVoteSetsById = {}
-		for (let dbVoteSet of dbVoteSets) dbVoteSetsById[dbVoteSet.id] = dbVoteSet
+		for (let dbVoteSet of dbVoteSets) dbVoteSetsById[dbVoteSet._id] = dbVoteSet
 		return ids
 			.map(id => VoteSet.newFromDb(id, dbVoteSetsById[id]))
-			.map(voteSet => this.exportVoteSet(ctx, voteSet))
+			.map(voteSet => this.exportVoteSet(req, voteSet))
 	}
 
-	async createNewVoteSet(ctx) {
-		let voteSet
-		await ctx.db.transaction(async () => {
-			const row = await ctx.db.getOne("SELECT MAX(id) AS maxId FROM msa_vote_sets WHERE id LIKE :id FOR UPDATE", {
-				id: this.getDbId(ctx, '%')
-			})
-			const newId = this.nextDbId(ctx, row.maxId)
-			voteSet = new VoteSet(newId)
-			await ctx.db.run("INSERT INTO msa_vote_sets (id) VALUES (:id)",
-				voteSet.formatForDb(["id"]))
-		})
+	async createNewVoteSet(req) {
+		const id = this.getDbId(req, "")
+		const res = await db.collection("msa_vote_sets_counter").findOneAndUpdate(
+			{ _id: id },
+			{
+				$set: { _id: id },
+				$inc: { value: 1 }
+			},
+			{
+				upsert: true,
+				new: true
+			}
+		)
+		const voteSet = new VoteSet(this.getDbId(req, res.value.value))
 		return voteSet
 	}
 
-	async upsertVote(ctx, id, voter, val) {
+	async upsertVote(id, voter, val) {
 		const vote = new Vote(id, voter)
 		vote.vote = val
-		const values = vote.formatForDb()
-		const res = await ctx.db.run("UPDATE msa_votes SET vote=:vote WHERE id=:id AND voter=:voter", values)
-		if (res.nbChanges === 0)
-			await ctx.db.run("INSERT INTO msa_votes (id, voter, vote) VALUES (:id, :voter, :vote)", values)
+		const vals = vote.formatForDb()
+		await db.collection("msa_votes").updateOne(
+			{ _id: vals._id },
+			{ $set: vals },
+			{ upsert: true }
+		)
 		return vote
 	}
 
-	async syncVoteSet(ctx, id) {
+	async syncVoteSet(id) {
 		// count votes
-		const { sum, nb } = await ctx.db.getOne("SELECT SUM(vote) AS sum, COUNT(vote) AS nb FROM msa_votes WHERE id=:id", { id })
+		const aggDoc = await db.collection("msa_votes").aggregate([{
+			$match : {
+				_id : new RegExp('^' + id)
+			}
+		}, {
+			$group: {
+				_id: null,
+				"nb": { $sum: 1 },
+				"sum": { $sum: "$vote" }
+			}
+		}]).next()
 		// insert count in vote set DB
-		await this.upsertVoteSet(ctx, id, sum, nb)
+		await this.upsertVoteSet(id, aggDoc.sum, aggDoc.nb)
 	}
 
-	async upsertVoteSet(ctx, id, sum, nb) {
+	async upsertVoteSet(id, sum, nb) {
 		const voteSet = new VoteSet(id)
 		voteSet.sum = sum
 		voteSet.nb = nb
-		const values = voteSet.formatForDb(["id", "sum", "nb"])
-		const res = await ctx.db.run("UPDATE msa_vote_sets SET sum=:sum, nb=:nb WHERE id=:id", values)
-		if (res.nbChanges === 0)
-			await ctx.db.run("INSERT INTO msa_vote_sets (id, sum, nb) VALUES (:id, :sum, :nb)", values)
+		const vals = voteSet.formatForDb()
+		await db.collection("msa_vote_sets").updateOne({
+			_id: id
+		}, {
+			$set: {
+				_id: id,
+				sum: vals.sum,
+				nb: vals.nb
+			}
+		}, {
+			upsert: true
+		})
 		return voteSet
 	}
 
@@ -105,13 +128,12 @@ class MsaVoteModule extends Msa.Module {
 		const app = this.app
 
 		// get vote count
-		app.get("/_count/:id", userMdw, (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getDbId(ctx, req.params.id)
-				const voteSet = await this.getVoteSet(ctx, id)
-				res.json(this.exportVoteSet(ctx, voteSet))
-			}).catch(next)
+		app.get("/_count/:id", userMdw, async (req, res, next) => {
+			try {
+				const id = this.getDbId(req, req.params.id)
+				const voteSet = await this.getVoteSet(id)
+				res.json(this.exportVoteSet(req, voteSet))
+			} catch(err) { next(err) }
 		})
 		/*
 				// get vote counts
@@ -124,26 +146,24 @@ class MsaVoteModule extends Msa.Module {
 		*/
 
 		// post vote set
-		app.post("/_vote", userMdw, (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const voteSet = await this.createNewVoteSet(ctx)
-				res.json(this.exportVoteSet(ctx, voteSet))
-			}).catch(next)
+		app.post("/_vote", userMdw, async (req, res, next) => {
+			try {
+				const voteSet = await this.createNewVoteSet(req)
+				res.json(this.exportVoteSet(req, voteSet))
+			} catch(err) { next(err) }
 		})
 
 		// post vote
-		app.post("/_vote/:id", userMdw, (req, res, next) => {
-			withDb(async db => {
-				const ctx = newCtx(req, { db })
-				const id = this.getDbId(ctx, req.params.id),
+		app.post("/_vote/:id", userMdw, async (req, res, next) => {
+			try {
+				const id = this.getDbId(req, req.params.id),
 					vote = req.body.vote
-				const voter = this.getUserId(ctx)
-				await this.upsertVote(ctx, id, voter, vote)
-				await this.syncVoteSet(ctx, id)
+				const voter = this.getUserId(req)
+				await this.upsertVote(id, voter, vote)
+				await this.syncVoteSet(id)
 				// returm ok
 				res.sendStatus(200)
-			}).catch(next)
+			} catch(err) { next(err) }
 		})
 	}
 }
@@ -165,28 +185,8 @@ registerMsaBox("msa-vote", {
 	exportRef: "/vote/msa-vote.js:exportMsaBox"
 })
 
-// utils
-
-function newCtx(req, kwargs) {
-	const ctx = Object.create(req)
-	Object.assign(ctx, kwargs)
-	return ctx
-}
-
-function mjoin(a, len, sep) {
-	let res = ""
-	for (let i = 0; i < len; ++i) {
-		if (i > 0) res += sep
-		res += a
-	}
-	return res
-}
-
 // export
 module.exports = {
-	installMsaModule: async itf => {
-		await require("./install")(itf)
-	},
 	startMsaModule: () => new MsaVoteModule("vote"),
 	MsaVoteModule
 }

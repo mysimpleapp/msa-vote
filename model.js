@@ -2,6 +2,7 @@ const { VoteParamDict } = require("./params")
 
 const exp = module.exports = {}
 
+const VOTE_SET_FIELDS = [ "sum", "nb", "createdBy", "params" ]
 
 exp.VoteSet = class {
 
@@ -12,23 +13,17 @@ exp.VoteSet = class {
         this.params = new VoteParamDict()
     }
 
-    formatForDb(keys) {
+    formatForDb() {
         const res = {}
-        if (!keys || keys.indexOf("id") >= 0)
-            res.id = this.id
-        if (!keys || keys.indexOf("sum") >= 0)
-            res.sum = this.sum
-        if (!keys || keys.indexOf("nb") >= 0)
-            res.nb = this.nb
-        if (!keys || keys.indexOf("params") >= 0)
-            res.params = this.params.getAsDbStr()
+        res._id = this.id
+        VOTE_SET_FIELDS.forEach(f => res[f] = this[f])
+        res.params = res.params.getAsDbVal()
         return res
     }
 
     parseFromDb(dbVoteSet) {
-        this.sum = dbVoteSet.sum
-        this.nb = dbVoteSet.nb
-        this.params = VoteParamDict.newFromDbStr(dbVoteSet.params)
+        VOTE_SET_FIELDS.forEach(f => this[f] = dbVoteSet[f])
+        this.params = VoteParamDict.newFromDbVal(dbVoteSet.params)
     }
 
     static newFromDb(id, dbVoteSet) {
@@ -41,14 +36,15 @@ exp.VoteSet = class {
 
 exp.Vote = class {
 
-    constructor(id, voter) {
-        this.id = id
+    constructor(voteSetId, voter) {
+        this.voteSetId = voteSetId
         this.voter = voter
     }
 
     formatForDb() {
         return {
-            id: this.id,
+            _id: `${this.voteSetId}-${this.voter}`,
+            voteSetId: this.voteSetId,
             voter: this.voter,
             vote: this.vote
         }
@@ -58,8 +54,8 @@ exp.Vote = class {
         this.vote = dbVote.vote
     }
 
-    static newFromDb(id, voter, dbVote) {
-        const vote = new this(id, voter)
+    static newFromDb(voteSetId, voter, dbVote) {
+        const vote = new this(voteSetId, voter)
         if (dbVote) vote.parseFromDb(dbVote)
         return vote
     }
