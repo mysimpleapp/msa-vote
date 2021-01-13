@@ -1,4 +1,4 @@
-import { importHtml, Q, ajax } from "/utils/msa-utils.js"
+import { importHtml, ajax } from "/utils/msa-utils.js"
 
 importHtml(`<style>
 	msa-vote {
@@ -37,16 +37,12 @@ const content = `
 export class HTMLMsaVoteElement extends HTMLElement {
 
 	connectedCallback() {
-		this.Q = Q
 		this.initContent()
 		this.initActions()
-		if (this.getNb() !== null) this.initVotesCount()
-		else this.getVotesCount()
+		this.tryInitCounts()
 	}
 
 	getBaseRoute() {
-		if (this.hasAttribute("base-route")) // TODO: deprecate
-			return this.getAttribute("base-route")
 		return this.baseRoute
 	}
 	getVoteId() { return this.getAttribute("vote-id") }
@@ -67,19 +63,26 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	initContent() {
 		this.innerHTML = content
 		if (!this.getCanVote()) {
-			this.Q("button.yes").style.visibility = "hidden"
-			this.Q("button.no").style.visibility = "hidden"
+			this.querySelector("button.yes").style.visibility = "hidden"
+			this.querySelector("button.no").style.visibility = "hidden"
 		}
 	}
 
 	initActions() {
-		this.Q("button.no").onclick = () => this.postVote(0)
-		this.Q("button.yes").onclick = () => this.postVote(1)
+		this.querySelector("button.no").onclick = () => this.postVote(0)
+		this.querySelector("button.yes").onclick = () => this.postVote(1)
+	}
+
+	tryInitCounts() {
+		if(this.getBaseRoute()) {
+			if (this.getNb() !== null) this.initVotesCount()
+			else this.getVotesCount()
+		}
 	}
 
 	getVotesCount() {
 		ajax("GET", `${this.getBaseRoute()}/_count/${this.getVoteId()}`,
-			{ loadingDom: this.Q(".counts") })
+			{ loadingDom: this.querySelector(".counts") })
 			.then(count => {
 				if (count) Object.assign(this, count)
 				this.initVotesCount()
@@ -89,14 +92,14 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	initVotesCount() {
 		const sum = this.getSum()
 		const nb = this.getNb()
-		this.Q(".count").textContent = nb ? Math.round(100 * sum / nb) + "%" : "-"
-		this.Q(".nb").textContent = nb + ' voter' + (nb > 1 ? 's' : '')
+		this.querySelector(".count").textContent = nb ? Math.round(100 * sum / nb) + "%" : "-"
+		this.querySelector(".nb").textContent = nb + ' voter' + (nb > 1 ? 's' : '')
 	}
 
 	postVote(vote) {
 		ajax("POST", `${this.getBaseRoute()}/_vote/${this.getVoteId()}`, {
 			body: { vote },
-			loadingDom: this.Q(".counts")
+			loadingDom: this.querySelector(".counts")
 		})
 			.then(() => this.getVotesCount())
 	}
@@ -115,6 +118,7 @@ export async function createMsaBox(ctx) {
 
 export function initMsaBox(el, ctx) {
 	el.baseRoute = `${ctx.boxesRoute}/vote`
+	el.tryInitCounts()
 }
 
 export function exportMsaBox(el) {
