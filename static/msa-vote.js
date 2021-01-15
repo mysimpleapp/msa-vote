@@ -1,26 +1,26 @@
-import { importHtml, ajax } from "/utils/msa-utils.js"
+import { importHtml, ajax, registerMsaBox, getMsaBoxCtx } from "/utils/msa-utils.js"
 
 importHtml(`<style>
-	msa-vote {
+	msa-vote, msa-vote-box {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
 	}
-	msa-vote button {
+	msa-vote button, msa-vote-box button {
 		padding: .2em
 /*		height: 2em; */
 	}
-	msa-vote .counts {
+	msa-vote .counts, msa-vote-box .counts {
 		padding: .5em;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		position: relative;
 	}
-	msa-vote .count {
+	msa-vote .count, msa-vote-box .count {
 		font-weight: bold;
 	}
-	msa-vote .nb {
+	msa-vote .nb, msa-vote-box .nb {
 		font-size: .8em;
 	}
 </style>`)
@@ -39,11 +39,12 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	connectedCallback() {
 		this.initContent()
 		this.initActions()
-		this.tryInitCounts()
+		if (this.getNb() !== null) this.initVotesCount()
+		else this.getVotesCount()
 	}
 
 	getBaseRoute() {
-		return this.baseRoute
+		return this.getAttribute("base-id")
 	}
 	getVoteId() { return this.getAttribute("vote-id") }
 	getSum() {
@@ -71,13 +72,6 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	initActions() {
 		this.querySelector("button.no").onclick = () => this.postVote(0)
 		this.querySelector("button.yes").onclick = () => this.postVote(1)
-	}
-
-	tryInitCounts() {
-		if(this.getBaseRoute()) {
-			if (this.getNb() !== null) this.initVotesCount()
-			else this.getVotesCount()
-		}
 	}
 
 	getVotesCount() {
@@ -109,20 +103,30 @@ customElements.define("msa-vote", HTMLMsaVoteElement)
 
 // box
 
-export async function createMsaBox(ctx) {
-	const vote = await ajax("POST", `${ctx.boxesRoute}/vote/_vote`)
-	const res = document.createElement("msa-vote")
-	res.setAttribute("vote-id", vote.id)
-	return res
+export class HTMLMsaVoteBoxElement extends HTMLMsaVoteElement {
+
+	async connectedCallback() {
+		this.msaBoxCtx = await getMsaBoxCtx(this)
+		super.connectedCallback()
+	}
+
+	getBaseRoute() {
+		return `${this.msaBoxCtx.boxesRoute}/vote`
+	}
 }
 
-export function initMsaBox(el, ctx) {
-	el.baseRoute = `${ctx.boxesRoute}/vote`
-	el.tryInitCounts()
-}
+customElements.define("msa-vote-box", HTMLMsaVoteBoxElement)
 
-export function exportMsaBox(el) {
-	const res = document.createElement("msa-vote")
-	res.setAttribute("vote-id", el.getVoteId())
-	return res
-}
+registerMsaBox("msa-vote-box", {
+	createBox: async function(ctx) {
+		const vote = await ajax("POST", `${ctx.boxesRoute}/vote/_vote`)
+		const res = document.createElement("msa-vote-box")
+		res.setAttribute("vote-id", vote.id)
+		return res
+	},
+	exportBox: function(el) {
+		const res = document.createElement("msa-vote-box")
+		res.setAttribute("vote-id", el.getVoteId())
+		return res
+	}
+})
