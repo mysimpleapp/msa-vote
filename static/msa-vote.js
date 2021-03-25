@@ -44,7 +44,7 @@ export class HTMLMsaVoteElement extends HTMLElement {
 	}
 
 	getBaseRoute() {
-		return this.getAttribute("base-id")
+		return this.getAttribute("base-route")
 	}
 	getVoteId() { return this.getAttribute("vote-id") }
 	getSum() {

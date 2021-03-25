@@ -50,19 +50,8 @@ class MsaVoteModule extends Msa.Module {
 	}
 
 	async createNewVoteSet(req) {
-		const id = this.getDbId(req, "")
-		const res = await db.collection("msa_vote_sets_counter").findOneAndUpdate(
-			{ _id: id },
-			{
-				$set: { _id: id },
-				$inc: { value: 1 }
-			},
-			{
-				upsert: true,
-				new: true
-			}
-		)
-		const voteSet = new VoteSet(this.getDbId(req, res.value.value))
+		const count = await dbCounterIncr("msa_vote_sets_counter", this.getDbId(req, ""))
+		const voteSet = new VoteSet(this.getDbId(req, count))
 		return voteSet
 	}
 
@@ -181,6 +170,23 @@ registerMsaBox("msa-vote-box", {
 	mods: { "/vote": new MsaVoteBoxModule() },
 	head: "/vote/msa-vote.js"
 })
+
+// utils
+
+async function dbCounterIncr(name, id) {
+	const res = await db.collection(name).findOneAndUpdate(
+		{ _id: id },
+		{
+			$set: { _id: id },
+			$inc: { value: 1 }
+		},
+		{
+			upsert: true,
+			new: true
+		}
+	)
+	return res.value ? res.value.value : 0
+}
 
 // export
 module.exports = {
