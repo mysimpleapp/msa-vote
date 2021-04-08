@@ -1,4 +1,4 @@
-import { importHtml, ajax, registerMsaBox, getMsaBoxCtx } from "/utils/msa-utils.js"
+import { importHtml, ajax, registerMsaBox, getMsaBoxCtx } from "/msa/utils/msa-utils.js"
 
 importHtml(`<style>
 	msa-vote, msa-vote-box {
